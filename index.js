@@ -62,6 +62,35 @@ async function run() {
     // Get All Properties
     app.get("/properties", async (req, res) => {
       let filter = {};
+      const userId = req.query.userId;
+      const location = req.query.location;
+      const propertyType = req.query.propertyType;
+      const minPrice = Number(req.query.minPrice);
+      const maxPrice = Number(req.query.maxPrice);
+      if (location) {
+        filter.location = location;
+      }
+      if (propertyType) {
+        filter.propertyType = {
+          $regex: `^${propertyType}$`,
+          $options: "i",
+        };
+      }
+      if (minPrice || maxPrice) {
+        filter.rentPrice = {};
+
+        if (minPrice) {
+          filter.rentPrice.$gte = minPrice;
+        }
+
+        if (maxPrice) {
+          filter.rentPrice.$lte = maxPrice;
+        }
+      }
+      if (userId) {
+        filter.userId = userId;
+      }
+      console.log(filter);
       const properties = await propertyCollection.find(filter).toArray();
       res.send(properties);
     });
@@ -75,9 +104,32 @@ async function run() {
         filter._id = new ObjectId(id);
       }
 
-      const properties = await propertyCollection.findOne(filter);
-      console.log(properties);
-      res.send(properties);
+      const [property] = await propertyCollection
+        .aggregate([
+          { $match: filter },
+          { $addFields: { userId: { $toObjectId: "$userId" } } },
+          {
+            $lookup: {
+              from: "user",
+              localField: "userId",
+              foreignField: "_id",
+              as: "user",
+            },
+          },
+          { $unwind: "$user" },
+          {
+            $project: {
+              userObjectId: 0,
+              "user._id": 0,
+              "user.password": 0,
+              "user.createdAt": 0,
+              "user.updatedAt": 0,
+            },
+          },
+        ])
+        .toArray();
+
+      res.send(property);
     });
 
     await client.db("admin").command({ ping: 1 });
