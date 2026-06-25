@@ -68,7 +68,10 @@ async function run() {
       const minPrice = Number(req.query.minPrice);
       const maxPrice = Number(req.query.maxPrice);
       if (location) {
-        filter.location = location;
+        filter.location = {
+          $regex: location,
+          $options: "i",
+        };
       }
       if (propertyType) {
         filter.propertyType = {
@@ -90,7 +93,7 @@ async function run() {
       if (userId) {
         filter.userId = userId;
       }
-      console.log(filter);
+
       const properties = await propertyCollection.find(filter).toArray();
       res.send(properties);
     });
