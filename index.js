@@ -67,6 +67,9 @@ async function run() {
       const propertyType = req.query.propertyType;
       const minPrice = Number(req.query.minPrice);
       const maxPrice = Number(req.query.maxPrice);
+      const limit = Number(req.query.limit);
+      const sortBy = req.query.sortBy;
+      const sortOrder = req.query.sortOrder;
       if (location) {
         filter.location = {
           $regex: location,
@@ -94,7 +97,11 @@ async function run() {
         filter.userId = userId;
       }
 
-      const properties = await propertyCollection.find(filter).toArray();
+      const properties = await propertyCollection
+        .find(filter)
+        .limit(limit)
+        .sort({ [sortBy]: sortOrder })
+        .toArray();
       res.send(properties);
     });
     // Get Properties by Id
