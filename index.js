@@ -25,6 +25,8 @@ async function run() {
 
     const db = client.db("RentBariDB");
     const propertyCollection = db.collection("properties");
+    const bookingCollection = db.collection("bookings");
+    const userCollection = db.collection("user");
 
     app.get("/", (req, res) => {
       res.send(" RentBari Server Running");
@@ -55,6 +57,39 @@ async function run() {
         res.status(500).send({
           success: false,
           message: "Failed to add property",
+        });
+      }
+    });
+    // Booking Property
+    app.post("/bookings", async (req, res) => {
+      try {
+        const bookingData = req.body;
+        // const propertyId = bookingData.propertyId;
+        // const userId = bookingData.userId;
+        // const startDate = bookingData.startDate;
+        // const endDate = bookingData.endDate;
+        // const status = bookingData.status;
+
+        const newBooking = {
+          ...bookingData,
+          bookingStatus: "pending",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        const result = await bookingCollection.insertOne(newBooking);
+
+        res.status(201).send({
+          success: true,
+          insertedId: result.insertedId,
+          message: "Booking added successfully",
+        });
+      } catch (error) {
+        console.error(error);
+
+        res.status(500).send({
+          success: false,
+          message: "Failed to add booking",
         });
       }
     });
