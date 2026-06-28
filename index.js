@@ -131,11 +131,15 @@ async function run() {
       if (userId) {
         filter.userId = userId;
       }
+      let sort = {};
 
+      if (sortBy) {
+        sort[sortBy] = sortOrder === "asc" ? 1 : -1;
+      }
       const properties = await propertyCollection
         .find(filter)
         .limit(limit)
-        .sort({ [sortBy]: sortOrder })
+        .sort(sort)
         .toArray();
       res.send(properties);
     });
@@ -175,6 +179,139 @@ async function run() {
         .toArray();
 
       res.send(property);
+    });
+
+    // Get Bookings by OwnerId
+    app.get("/bookings", async (req, res) => {
+      let filter = {};
+      const propertyOwnerId = req.query.propertyOwnerId;
+      const userId = req.query.userId;
+      const bookingStatus = req.query.bookingStatus;
+
+      if (userId) {
+        filter.userId = userId;
+      }
+
+      if (propertyOwnerId) {
+        filter.propertyOwnerId = propertyOwnerId;
+      }
+      if (bookingStatus) {
+        filter.bookingStatus = bookingStatus;
+      }
+
+      const bookings = await bookingCollection
+        .aggregate([
+          { $match: filter },
+
+          // Convert ids to ObjectId
+          {
+            $addFields: {
+              ObjectPropertyId: { $toObjectId: "$propertyId" },
+              ObjectUserId: { $toObjectId: "$userId" },
+            },
+          },
+
+          // Property lookup
+          {
+            $lookup: {
+              from: "properties",
+              localField: "ObjectPropertyId",
+              foreignField: "_id",
+              as: "property",
+            },
+          },
+          { $unwind: "$property" },
+
+          // User lookup
+          {
+            $lookup: {
+              from: "user",
+              localField: "ObjectUserId",
+              foreignField: "_id",
+              as: "user",
+            },
+          },
+          {
+            $unwind: {
+              path: "$user",
+              preserveNullAndEmptyArrays: true,
+            },
+          },
+
+          // Remove unnecessary fields
+          {
+            $project: {
+              ObjectPropertyId: 0,
+              ObjectUserId: 0,
+
+              "property.status": 0,
+              "property.createdAt": 0,
+              "property.updatedAt": 0,
+
+              "user.password": 0,
+              "user._id": 0,
+              "user.createdAt": 0,
+              "user.updatedAt": 0,
+            },
+          },
+        ])
+        .toArray();
+
+      res.send(bookings);
+    });
+
+    // Update Booking
+    app.patch("/bookings/:bookingId", async (req, res) => {
+      try {
+        const updateData = req.body;
+        const bookingId = req.params.bookingId;
+
+        const status = updateData.status;
+
+        const result = await bookingCollection.updateOne(
+          { _id: new ObjectId(bookingId) },
+          { $set: { bookingStatus: status } },
+        );
+
+        res.status(200).send({
+          success: true,
+          message: "Booking updated successfully",
+        });
+      } catch (error) {
+        console.error(error);
+
+        res.status(500).send({
+          success: false,
+          message: "Failed to update booking",
+        });
+      }
+    });
+
+    // Update User
+    app.patch("/user", async (req, res) => {
+      try {
+        const updateData = req.body;
+        const userId = updateData.userId;
+
+        const favorites = updateData.favorites;
+
+        const result = await userCollection.updateOne(
+          { _id: new ObjectId(userId) },
+          { $set: { favorites } },
+        );
+
+        res.status(200).send({
+          success: true,
+          message: "User updated successfully",
+        });
+      } catch (error) {
+        console.error(error);
+
+        res.status(500).send({
+          success: false,
+          message: "Failed to update user",
+        });
+      }
     });
 
     await client.db("admin").command({ ping: 1 });
