@@ -245,7 +245,7 @@ async function run() {
               ObjectUserId: 0,
 
               "property.status": 0,
-              "property.createdAt": 0,
+              // "property.createdAt": 1,
               "property.updatedAt": 0,
 
               "user.password": 0,
@@ -254,6 +254,7 @@ async function run() {
               "user.updatedAt": 0,
             },
           },
+          { $sort: { "property.createdAt": -1 } },
         ])
         .toArray();
 
