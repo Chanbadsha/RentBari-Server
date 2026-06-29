@@ -270,7 +270,6 @@ async function run() {
           { _id: new ObjectId(propertyId) },
           { $set: updateData },
         );
-        console.log(result);
 
         res.status(200).send({
           success: true,
@@ -313,6 +312,7 @@ async function run() {
             $addFields: {
               ObjectPropertyId: { $toObjectId: "$propertyId" },
               ObjectUserId: { $toObjectId: "$userId" },
+              ObjectPropertyOwnerId: { $toObjectId: "$propertyOwnerId" },
             },
           },
 
@@ -342,6 +342,16 @@ async function run() {
               preserveNullAndEmptyArrays: true,
             },
           },
+          // Property Owner lookup
+          {
+            $lookup: {
+              from: "user",
+              localField: "ObjectPropertyOwnerId",
+              foreignField: "_id",
+              as: "propertyOwner",
+            },
+          },
+          { $unwind: "$propertyOwner" },
 
           // Remove unnecessary fields
           {
@@ -392,6 +402,32 @@ async function run() {
         });
       }
     });
+    // Delete Booking
+    app.delete("/bookings/:bookingId", async (req, res) => {
+      try {
+        const bookingId = req.params.bookingId; // Get the bookingId from the URL path
+        const result = await bookingCollection.deleteOne({
+          _id: new ObjectId(bookingId),
+        }); // Delete the booking with the specified ID
+        if (result.deletedCount === 0) {
+          return res.status(404).send({
+            success: false,
+            message: "Booking not found",
+          });
+        }
+        res.status(200).send({
+          success: true,
+          deletedCount: result.deletedCount,
+          message: "Booking deleted successfully",
+        });
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({
+          success: false,
+          message: "Failed to delete booking",
+        });
+      }
+    });
 
     // Get All Users
     app.get("/users", async (req, res) => {
@@ -430,11 +466,28 @@ async function run() {
         const userId = updateData.userId;
 
         const favorites = updateData.favorites;
+        const userStatus = updateData.userStatus;
+        const userRole = updateData.userRole;
+        if (userRole) {
+          const result = await userCollection.updateOne(
+            { _id: new ObjectId(userId) },
+            { $set: { userRole } },
+          );
+        }
 
-        const result = await userCollection.updateOne(
-          { _id: new ObjectId(userId) },
-          { $set: { favorites } },
-        );
+        if (userStatus) {
+          const result = await userCollection.updateOne(
+            { _id: new ObjectId(userId) },
+            { $set: { userStatus } },
+          );
+        }
+
+        if (favorites) {
+          const result = await userCollection.updateOne(
+            { _id: new ObjectId(userId) },
+            { $set: { favorites } },
+          );
+        }
 
         res.status(200).send({
           success: true,
