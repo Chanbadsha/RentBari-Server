@@ -21,7 +21,7 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    // await client.connect();
+    await client.connect();
 
     const db = client.db("RentBariDB");
     const propertyCollection = db.collection("properties");
@@ -52,7 +52,7 @@ async function run() {
           message: "Property added successfully",
         });
       } catch (error) {
-        console.error(error);
+        // console.error(error);
 
         res.status(500).send({
           success: false,
@@ -83,7 +83,7 @@ async function run() {
           message: "Property deleted successfully",
         });
       } catch (error) {
-        console.error(error);
+        // console.error(error);
 
         res.status(500).send({
           success: false,
@@ -116,7 +116,7 @@ async function run() {
           message: "Booking added successfully",
         });
       } catch (error) {
-        console.error(error);
+        // console.error(error);
 
         res.status(500).send({
           success: false,
@@ -276,7 +276,7 @@ async function run() {
           message: "Booking updated successfully",
         });
       } catch (error) {
-        console.error(error);
+        // console.error(error);
 
         res.status(500).send({
           success: false,
@@ -394,7 +394,7 @@ async function run() {
           message: "Booking updated successfully",
         });
       } catch (error) {
-        console.error(error);
+        // console.error(error);
 
         res.status(500).send({
           success: false,
@@ -421,7 +421,7 @@ async function run() {
           message: "Booking deleted successfully",
         });
       } catch (error) {
-        console.error(error);
+        // console.error(error);
         res.status(500).send({
           success: false,
           message: "Failed to delete booking",
@@ -497,7 +497,7 @@ async function run() {
           message: "User updated successfully",
         });
       } catch (error) {
-        console.error(error);
+        // console.error(error);
 
         res.status(500).send({
           success: false,
@@ -508,14 +508,14 @@ async function run() {
 
     await client.db("admin").command({ ping: 1 });
 
-    console.log("✅ Connected to MongoDB");
+    // console.log("✅ Connected to MongoDB");
   } catch (error) {
-    console.error("❌ MongoDB Error:", error);
+    // console.error("❌ MongoDB Error:", error);
   }
 }
 
 run().catch(console.dir);
 
 app.listen(port, () => {
-  console.log(` Server running on port ${port}`);
+  // console.log(` Server running on port ${port}`);
 });
