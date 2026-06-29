@@ -432,6 +432,9 @@ async function run() {
     // Get All Users
     app.get("/users", async (req, res) => {
       let filter = {};
+      filter = {
+        userStatus: { $ne: "deleted" },
+      };
       const userId = req.query.userId;
       const location = req.query.location;
       const limit = Number(req.query.limit);
