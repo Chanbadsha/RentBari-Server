@@ -60,6 +60,37 @@ async function run() {
         });
       }
     });
+
+    // Delete Property
+    app.delete("/properties/:propertyId", async (req, res) => {
+      try {
+        const propertyId = req.params.propertyId;
+
+        const result = await propertyCollection.deleteOne({
+          _id: new ObjectId(propertyId),
+        });
+
+        if (result.deletedCount === 0) {
+          return res.status(404).send({
+            success: false,
+            message: "Property not found",
+          });
+        }
+
+        res.status(200).send({
+          success: true,
+          deletedCount: result.deletedCount,
+          message: "Property deleted successfully",
+        });
+      } catch (error) {
+        console.error(error);
+
+        res.status(500).send({
+          success: false,
+          message: "Failed to delete property",
+        });
+      }
+    });
     // Booking Property
     app.post("/bookings", async (req, res) => {
       try {
@@ -99,15 +130,23 @@ async function run() {
       let filter = {};
       const userId = req.query.userId;
       const location = req.query.location;
+      const status = req.query.status;
       const propertyType = req.query.propertyType;
       const minPrice = Number(req.query.minPrice);
       const maxPrice = Number(req.query.maxPrice);
       const limit = Number(req.query.limit);
       const sortBy = req.query.sortBy;
       const sortOrder = req.query.sortOrder;
+
       if (location) {
         filter.location = {
           $regex: location,
+          $options: "i",
+        };
+      }
+      if (status) {
+        filter.status = {
+          $regex: status,
           $options: "i",
         };
       }
@@ -143,6 +182,46 @@ async function run() {
         .toArray();
       res.send(properties);
     });
+    // Get All Properties
+    app.get("/admin/properties", async (req, res) => {
+      let filter = {};
+
+      const status = req.query.status;
+
+      if (status) {
+        filter.status = {
+          $regex: status,
+          $options: "i",
+        };
+      }
+      const properties = await propertyCollection
+        .aggregate([
+          { $match: filter },
+          { $addFields: { userId: { $toObjectId: "$userId" } } },
+          {
+            $lookup: {
+              from: "user",
+              localField: "userId",
+              foreignField: "_id",
+              as: "user",
+            },
+          },
+          { $unwind: "$user" },
+          {
+            $project: {
+              userObjectId: 0,
+              "user._id": 0,
+              "user.password": 0,
+              "user.createdAt": 0,
+              "user.updatedAt": 0,
+            },
+          },
+        ])
+        .toArray();
+
+      res.send(properties);
+    });
+
     // Get Properties by Id
     app.get("/properties/:propertyId", async (req, res) => {
       let filter = {};
@@ -179,6 +258,32 @@ async function run() {
         .toArray();
 
       res.send(property);
+    });
+
+    // Update Property
+    app.patch("/properties/:propertyId", async (req, res) => {
+      try {
+        const updateData = req.body;
+        const propertyId = req.params.propertyId;
+
+        const result = await propertyCollection.updateOne(
+          { _id: new ObjectId(propertyId) },
+          { $set: updateData },
+        );
+        console.log(result);
+
+        res.status(200).send({
+          success: true,
+          message: "Booking updated successfully",
+        });
+      } catch (error) {
+        console.error(error);
+
+        res.status(500).send({
+          success: false,
+          message: "Failed to update booking",
+        });
+      }
     });
 
     // Get Bookings by OwnerId
@@ -286,6 +391,36 @@ async function run() {
           message: "Failed to update booking",
         });
       }
+    });
+
+    // Get All Users
+    app.get("/users", async (req, res) => {
+      let filter = {};
+      const userId = req.query.userId;
+      const location = req.query.location;
+      const limit = Number(req.query.limit);
+      const sortBy = req.query.sortBy;
+      const sortOrder = req.query.sortOrder;
+      if (location) {
+        filter.location = {
+          $regex: location,
+          $options: "i",
+        };
+      }
+      if (userId) {
+        filter.userId = userId;
+      }
+      let sort = {};
+
+      if (sortBy) {
+        sort[sortBy] = sortOrder === "asc" ? 1 : -1;
+      }
+      const users = await userCollection
+        .find(filter)
+        .limit(limit)
+        .sort(sort)
+        .toArray();
+      res.send(users);
     });
 
     // Update User
